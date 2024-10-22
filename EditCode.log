@@ -1,0 +1,330 @@
+//=================LBM-MRT-Acoustic-Point-Source-ABC-V1.3=============//
+2024/07/11 note
+1. 续算可能还存在问题，续算前一定记得保存数据。
+
+2024/07/10 note
+1. 使用单精度的计算速度是双精度的 2倍
+
+2024/07/10 debug
+1. block 和 grid的初始化不小心被我注释掉了，导致计算速度下降很厉害
+   // block.x = block_Threads_X;  block.y = 1;    block.z = 1;
+   // grid.y = 1; grid.z = 1; 
+2024/07/10 alter
+1. 将 cuda 函数中的 sin 函数提取到 cuda 函数外。
+
+2024/07/09 alter
+1. 修改运动粘度的计算方式为 KinematicViscosity_LBM = Lid_velocity * (T_P)NXG0 / Reynolds_number; 之前以球的直径为特征长度，现在以计算域长度为特征长度。
+
+2024/07/08 debug
+1. main_iteration_GPU.cu文件中忘了添加#include "boundary_gpu.cuh"，导致 #if #endif并没有用。
+2. 有几个feq的求取是 
+feqbb = w_equ_gpu[i_f] * (rhobb * prc(1.) + prc(3.)*edotubb + prc(4.5)*edotubb*edotubb - prc(1.5)* udotubb);
+应该修改为
+feqbb = rhobb * w_equ_gpu[i_f] * (prc(1.) + prc(3.)*edotubb + prc(4.5)*edotubb*edotubb - prc(1.5)* udotubb);
+rhobb在括号内的情况是不可压修正，这里并没有使用。
+
+2024/07/07 alter
+1. ABC对应的边界不再是静止的，而是周期速度边界（因为模拟的是驻波）。
+2. 前后和上下边界使用NEEM处理，之前是按照静止边界条件处理，这里也修改为了周期速度边界条件。
+
+2024/07/08 新建LBM-MRT-Acoustic-Point-Source-ABC-V1.3，该版本为在启明上测试的版本，进行了一些修改
+//=================LBM-MRT-Acoustic-Point-Source-ABC-V1.2=============//
+2024/07/04 alter
+1. 在入口处添加声波，使用 uy = Lid_velocity_gpu * sin(2.*3.1415926* ntime/40.); 周期速度的方式实现。
+2. 对BC_Guo2002_GPU_face_xz_save 等进行调整，将循环里求ux,uy,uz,udotu, 调整到循环外。之前放循环里是为了计算剪切流边界条件。
+3. 修改xz边界条件，使其左右面都为给定的周期速度边界条件，实现驻波（详细见文献 González, 2003）。同时修改ABC边界，使xz左右边界不存在吸收边界层。
+4. 控制文件中添加 声波频率项。
+2024/07/04 debug
+1. 删除 Out_ABC_xz 函数的使用。
+
+2024/07/02 新建代码 LBM-MRT-Acoustic-Point-Source-ABC-V1.2，尝试在入口处添加声波，另外ABC的实现需要进一步优化。
+//=================LBM-MRT-Acoustic-Point-Source-ABC-V1.1=============//
+2024/07/02 Archive File
+流场中添加了两个颗粒，中心处添加声波点源，结果定性上没有问题。
+
+2024/07/02 debug
+1. 函数calculate_boundary_sphere_move(T_P Diam, T_P Coor[3], T_P Coor_old[3])中忘了计算Refill_Point_I ，也忘了从cpu拷贝到gpu中。但结果竟然定性上合理。这里对该bug进行了修改。
+
+2024/07/02 alter
+1. 大量删除 LBM-MRT-Acoustic-Point-Source-ABC-V1.0 中被注释掉的代码。
+2. GPU中颗粒也使用结构体进行表示。
+
+2024/07/02 新建代码 LBM-MRT-Acoustic-Point-Source-ABC-V1.1，尝试GPU变量也使用结构体。
+//=================LBM-MRT-Acoustic-Point-Source-ABC-V1.0=============//
+2024/07/02 debug
+1. Refill_Point_I和Refill_Point_DV需要修改为数组，数组大小等于颗粒数目。
+
+2024/07/02 bug
+1. 需要将代码中pdf变量修改为二维变量，目前pdf为一维变量，当地址连续时不存在问题，但是当地址不再连续时可能出现大的问题。
+
+2024/07/01 alter
+1. 添加续算功能。
+
+2024/07/01 debug
+1. 控制输出精度的功能存在问题，目前将 output_fieldData_precision_cmd 的作用提出，现在输出精度只和solver_precision 中浮点数精度有关。
+
+2024/06/30 alter
+1. 流场中心添加一个点声源。通过反弹格式BB实现点声源。
+
+2024/06/30 alter
+1. 流场中心添加一个点声源。通过平衡态分布函数实现点声源
+
+2024/06/30 新建代码 LBM-MRT-Acoustic-Point-Source-ABC-V1.0，尝试实现算例：点声源 single point source的传播。
+
+//=================LBM-MRT-two-spheres-in-sound-V3.0=============//
+2024/06/30 新建，LBM-MRT-two-spheres-in-sound-V3.0，尝试代码中更好的实现吸声边界条件ABC，即无反弹边界条件。
+
+//=================LBM-MRT-two-spheres-in-sound-V2.2=============//
+2024/06/30 Archive File
+1. 实现两个颗粒在箱中下落的代码，即四周和底部为壁面，顶盖部分为开放边界，颗粒在箱子中受到重力影响自由下落。
+
+2024/06/30 debug
+1. 不知道为什么引入ntime_particles_info后报错Segmentation fault (core dumped)，当我将计算将变量 td_console 修改为 td_particles后又似乎回复了正常，猜测 td_console 可能是某个库的内置变量。
+
+2024/06/30 alter
+1. 在simulation_control.txt 中添加控制颗粒信息输出时间步的 ntime_particles_info
+
+2024/06/29 debug
+1. 记得数组重复使用时提前将数组重置为0，否者容易造成数据污染问题，特别是球的边界信息等，由于球移动后边界信息使用的数组大小不同，不提前重置为0的话会导致边界信息变少后，可能会有多余的数据污染掉真实信息。当然也可以通过指定有用的数据大小来防止这一现象，但建议还是在计算开销不大的情况下添加数组重置的功能。例如 memset(Particl_BC_I, 0, mem_particle_BC_max_long);
+2. 原来的代码忘记了将cpu中计算的refill信息传到gpu段，添加传递代码
+cudaErrorCheck(cudaMemcpy(Refill_Point_DV_gpu, Refill_Point_DV, mem_refill_max_int, cudaMemcpyHostToDevice));
+3. 有一个particle_IBB_BC_Force_GPU 函数 中的其中一个输入为sphere_BC_fOld_gpu[0]，实际应该是sphere_BC_fOld_gpu[i_Nsphe]，我忘了修改为两个颗粒的情况，所以一直算不对两个颗粒。
+修改 sphere_BC_fOld_gpu[0] 修改为 sphere_BC_fOld_gpu[i_Nsphe]
+
+2024/06/27 debug
+1. Length_R_G_gpu的引入存在逻辑问题，删除掉。
+
+2024/06/27 alter
+1. 根据控制文件simulation_control.txt 控制代码计算多少个球（目前只能计算0，1，2个）。
+
+2024/06/27 alter
+1. 进一步优化代码：使用 #pragma unroll 对间断循环进行展开，节约循环判断需要的时间；发现对streaming和collision的函数kernel_OSI_GPU做了循环完全展开后效率直接提高了一倍，由原来的 500 MLUPS 增长到 1000 MLUPS 。
+2. 进一步优化代码：循环中重复计算的索引提取到循环外边，这样只做一次计算即可。这样做对计算效率的增长有限，只有略微的增长。
+
+2024/06/26 alter
+1. 将long long 修改为 I_INT，I_INT的定义可以是long long或int。只要修改 solver_precision.h 文件中PRECISION_INTEGER的定义即可完成修改。
+
+2024/06/26 新建，将代码中所有的long long 修改为 int，测试是否是long long 导致的 CUDA Assert: misaligned address 报错。新代码命名为LBM-MRT-two-spheres-in-sound-V2.2
+
+//=================LBM-MRT-two-spheres-in-sound-V2.1=============//
+2024/06/26 alter
+这次修改后的代码似乎是对的，但是只计算了500步，不能保证正确，至少代码可以正常运行了。但是索引必须取余，即p_step% (NGRID1_D)才能避免报错 CUDA Assert: misaligned address
+
+2024/06/26 bug
+出现一个很奇怪的bug，在函数wall_BB_BC_GPU_face_xy的循环中添加printf("")后代码正常运行，但是如果不添加会提示CUDA Assert: misaligned address src/main_iteration_GPU.cu 1309;
+另外将i_Global + Length_gpu[i_f]或者i_Global 对 NGRID1_D 取余也能正常运行，但是实际上这两个值都小于 NGRID1_D ，即取余等于其本身。
+未发现如何修改该bug，决定回滚到版本LBM-MRT-two-spheres-in-sound-V1.1，并重新修改。新的代码命名为V2.1
+//=================LBM-MRT-two-spheres-in-sound-V2.0=============//
+2024/06/25 alter
+1. 引入所求节点在全局分布函数数组中的索引 i_Global，考虑到计算速度，这里在调用迁移前分布函数时做了针对矩形计算域的优化，即，如果计算域不是矩形的，那么i_Global -Length_gpu[i_f]不能表示迁移前的分布函数。
+对每个格点的索引计算进行优化，不使用复杂的整除和求余计算，针对矩形计算域进行特殊优化， 通过加法即可求出每个格点的索引。即
+不再需要（详细见LBM-MRT-two-spheres-in-sound-V1.1）
+I_INT i_z = i_Thr/XYG0_D + 1;
+I_INT i_y = i_Thr%XYG0_D / NXG0_D + 1;
+I_INT i_x = i_Thr%XYG0_D % NXG0_D + 1;
+
+p_index_D(i_x,i_y,i_z)
+计算速度为simulation speed: 510.136 MLUPS
+2. 引入pdf_old_gpu和pdf_new_gpu
+2024/06/26 bug
+出现一个很奇怪的bug，在函数wall_BB_BC_GPU_face_xy的循环中添加printf("")后代码正常运行，但是如果不添加会提示CUDA Assert: misaligned address src/main_iteration_GPU.cu 1309;
+另外将i_Global + Length_gpu[i_f]或者i_Global 对 NGRID1_D 取余也能正常运行，但是实际上这两个值都小于 NGRID1_D ，即取余等于其本身。
+未发现如何修改该bug，决定回滚到版本LBM-MRT-two-spheres-in-sound-V1.1，并重新修改。新的代码命名为V2.1
+
+2024/06/24 考虑到统一计算宏观量的方法比在格点上单独计算宏观量需要的计算量大，因此还是使用在格点上单独计算宏观量的方法。V1.x的代码使用一套分布函数（one-step index (OSI) algorithm from Ma et al., 2023 ）进行计算，该方法索引的复杂性导致了调用时间更长，考虑到GPU的内存通常是足够大的，我计划使用两套分布函数来进行LBM计算以尽可能提高运算效率。使用两套分布函数的代码命名为LBM-MRT-two-spheres-in-sound-V2.x。
+//=================LBM-MRT-two-spheres-in-sound-V1.2=============//
+2024/06/24 alter
+1. 修改每个格点上宏观变量的计算方法，改为统一计算。
+删除了一些暂时用不到的边界条件：Zhou and He的边界条件等
+注意：目前代码不支持改变 c_LBM_gpu 和 dx_LBM或dt_LBM的值，这3个值目前还都是只能设置为1
+实际计算表现上，
+统一计算宏观变量时，simulation speed: 421.358 MLUPS
+每个格点上分别计算宏观量时，simulation speed: 502.247 MLUPS
+可以发现统一计算宏观变量后计算速度变慢了，这主要是由于多了一个从全局变量调用宏观量的过程，因此计算速度变慢。
+
+
+2024/06/24 新建，在V1.0版本的基础上对代码进行优化，主要目的是提高计算速度，修改每个格点上宏观变量的计算方法，改为统一计算。
+//=================LBM-MRT-two-spheres-in-sound-V1.0=============//
+2024/05/28 add features
+1. 实现两个颗粒的沉降
+
+2024/05/28 新建，实现两个球形颗粒在声场作用下的运动，可以选择是否存在重力作用。
+
+//=================LBM-MRT-Settling-Particle-V1.0=============//
+
+2024/05/27 debug
+1. 求角速度导致的球体表面速度公式，为r x omiga 即相对球心的位置矢量叉乘角动量，不能用角动量乘以半径，因为这是三维问题。
+
+2024/05/27 note
+1. 由于流场初始化时使用的是均匀静止流场的平衡态进行，这也就意味着初始情况下颗粒在流场中是不受到浮力影响的，然而随着流体演化，如果流场也受到体积力的影响，那么流场会逐渐对处于其中的颗粒产生浮力。然而这个过程不是我们想要的，我们要的是颗粒在流体中的沉降，从一开始颗粒就受到重力和浮力的共同作用，为了研究这个问题，我们可以认为流场不受到体积力的作用（不可压情况下成立），流场中颗粒受到重力和浮力的合力影响，其加速度为a=g * (1-1/r_rho)，其中r_rho=rho_particle/rho_fluid为颗粒与背景流场的密度比。
+2. 代码中携带coord的变量都是在索引系统中的坐标，而不是在LBM系统中的坐标，要注意转换。
+
+2024/05/27 alter
+1. 修改边界条件，四周为壁面，只有顶盖为开放边界。
+
+2024/05/27 add features
+1. 代码中添加了 dx_LBM !=1 时的计算能力，注意代码中目前还必须保证c_LBM =dx_LBM/dt_LBM = 1 才能顺利求解。
+当dx_LBM不等于1时，需要改变颗粒尺寸和颗粒质量，同时颗粒受力和角动量也需要改变。
+
+2024/05/27 项目已经在2024/05/27 note的一些假设下能够成功计算颗粒沉降，接下来目标是实现给定任意lbm中dt和dx的情况下实现计算，并在实现后命名项目为LBM-MRT-Settling-Particle-V1.0。
+
+//=================LBM-MRT-Settling-Particle-V0.1=============//
+2024/05/27 note
+1. 可压缩性对背景流场的影响需要更加慎重的考虑，特别是当存在体积力或者考虑的背景流场是液体时，前者会造成均匀流场出现密度分层和流动，后者由于不满足理想气体状态方程，其压力的表现要特别注意。
+2. 弛豫时间过小同样会导致不稳定，推测也是舍入误差抹除了非平衡态信息导致的。
+3. 弛豫时间强制给为了0.9，以保持稳定。
+4. 没有全局的体积力，颗粒受到的重力和浮力的作用单独给定，即假设背景流体完全不可压，重力和支持力相互完全抵消，因此可以认为不受到体力的影响。
+
+2024/05/27 debug
+1. 修改了calculate_boundary_sphere的bug，求球体边界节点时，循环开始的初始位置设置不对。
+2. 修改了calculate_boundary_sphere_move中存在的bug：refill节点求取过程中把循环会会继续使用的值给错误覆盖了，应该使用新的变量以放置错误覆盖已有的数据。
+
+2024/05/24 note
+1. 在使用原始的LBM(没有不可压修正)解不可压流体时，如果我们固定c=dx/dt=1，那么无量纲参数似乎只需要给定空间长度比即可，时间比通过声速的比值确定．如果自由确定时间的无量纲参数，可能会导致声速比不正常，最终导致理想气体状态方程中RT的不正确，在计算包含体积力的流场时，可能会出现流体压缩性变的很大。
+
+2024/05/23 alter
+1. 当体积力存在时，无滑移边界条件需要修改。Bounceback边界（启发式边界）不知道如何修改(似乎不用修改，可以直接用？ ref:A comparative study of immersed boundary method and interpolated bounce-back scheme for no-slip boundary treatment in the lattice Boltzmann method: Part I, laminar flows)。
+
+2024/05/22 add features
+1. 颗粒位置在control文件中定义实现
+
+2024/05/22 新建项目LBM-MRT-Settling-Particle，实现颗粒在重力作用下沉降。
+
+//=================LBM-MRT-NRBC-sound-V1.2=============//
+2024/05/22 note
+1. 代码中体力body_force为加速度，例如重力加速度。MRT中F表示为密度乘以加速度，即F=rho*a.
+2. 注意，一旦碰撞发生，此时调用格点上的分布函数时需要使用ntime+1。
+
+2024/05/22 debug
+1. 边界，碰撞，颗粒移动，refill等过程的顺序十分重要，要特别小心处理，这里的顺序为：
+BC, Guo2002  -> IBB -> moving particle  -> refill  -> save info for IBB  -> Collision
+这里的refill处理的是碰撞前分布函数，即重构新流体点的碰撞前分布函数，之后新流体点也会发生碰撞。为了方便描述，我们定义颗粒移动前边界点为临近此时边界的最近邻流体内点，同理有颗粒移动后边界点。
+该碰撞过程意味着颗粒移动前边界点在发生碰撞时其旁边可能不再是边界（由于颗粒移动产生了新的流体点），但是其碰撞使用的碰撞前分布函数还是认为边界不变，而新流体点可能会需要颗粒移动前边界点的信息进行重构，之后发生碰撞过程（可以从输运过程分析，这种情况具有一定的道理）
+ 
+2024/05/21 note
+1. 颗粒边界最近邻流体点分布函数的确定需要已知边界点速度。颗粒边界点的速度的确定可以通过多种方式，下边列举了两种方法
+        ux = Particl_Velos_gpu[0] + (Particl_AngulVelos_gpu[1]*Bz - Particl_AngulVelos_gpu[2]*By);
+        uy = Particl_Velos_gpu[1] + (Particl_AngulVelos_gpu[2]*Bx - Particl_AngulVelos_gpu[0]*Bz);
+        uz = Particl_Velos_gpu[2] + (Particl_AngulVelos_gpu[0]*By - Particl_AngulVelos_gpu[1]*Bx);
+        或者(下边的方法是错的，因为球是三维的 2024/05/28)
+        uwx = Particl_Velos_gpu[0] + Particl_AngulVelos_gpu[0]*Sphere_radius_gpu;
+        uwy = Particl_Velos_gpu[1] + Particl_AngulVelos_gpu[1]*Sphere_radius_gpu;
+        uwz = Particl_Velos_gpu[2] + Particl_AngulVelos_gpu[2]*Sphere_radius_gpu;
+    那种方法合适需要进一步分析。
+2024/05/20 note
+1. 注意文件后缀，例如.cu或.cpp分别针对cuda函数和c++的函数，如果后缀错误很容易出现链接库问题（和make文件有关）
+2. Zhao and Yong, 2017 2nd order的IBB似乎不适用于颗粒移动的情况，因为该边界条件需要用到碰撞前后的信息，然而碰撞后颗粒发生了位移，新流体点需要refill，而我们通常不会去同时refill碰撞前后的信息。
+
+2024/05/20 alter
+1. 对计算球周围临近点的实现逻辑进行了修改，详细见函数calculate_boundary_sphere_move。
+2. 尝试gpu中计算上述功能calculate_boundary_sphere_move_gpu，但报错。
+
+2024/05/20 debug
+1. 修改函数calculate_boundary_sphere中的if (qq < 1. && qq > 0.)为if (qq < 1. && qq >= 0.)。原来的if语句存在错误，会导致球内部的格点信息通过正好位于球上的格点传到流场内，是错误的。
+2. 该处修改有问题，之前是对的，碰撞应该发生在IBB之后，2024/05/21重新修改。
+(Zhao and Yong, 2017的IBB实现存在错误，需要修改。原来的实现错误理解了碰撞前和碰撞后项。kernel_OSI_GPU函数应该在IBB实现前。)
+3. 多cu文件访问__constant__修饰的gpu中常量还是存在定义冲突（使用extern修饰时提示未定义）问题，需要将来解决。
+
+2024/05/17 alter
+1. 修改MRT功能的实现，以下为旧的实现，多次矩阵运算。可以修改为利用碰撞矩阵inverse(M)*S*M修改为只包含一次矩阵运算的形式
+        // MRT 多次矩阵运算
+        T_P m[NDIR], meq[NDIR], temp_m[NDIR];
+        T_P MRT_Force_gpu[NDIR];
+        MRT_Force_gpu[0] = prc(0.); MRT_Force_gpu[2] = prc(0.); MRT_Force_gpu[4] = prc(0.); MRT_Force_gpu[6] = prc(0.); MRT_Force_gpu[8] = prc(0.); MRT_Force_gpu[10] = prc(0.);
+        MRT_Force_gpu[12] = prc(0.); MRT_Force_gpu[16] = prc(0.); MRT_Force_gpu[17] = prc(0.); MRT_Force_gpu[18] = prc(0.);
+        MRT_Force_gpu[1] = prc(19.)*(prc(2.)- MRT_S_gpu[1])*(ux*body_accelerate_gpu[0]+uy*body_accelerate_gpu[1]+uz*body_accelerate_gpu[2]);
+        MRT_Force_gpu[3] = (prc(1.)- prc(0.5)*MRT_S_gpu[3])*body_accelerate_gpu[0]*dt_LBM_gpu; MRT_Force_gpu[5] = (prc(1.)- prc(0.5)*MRT_S_gpu[5])*body_accelerate_gpu[1]*dt_LBM_gpu; MRT_Force_gpu[7] = (prc(1.)- prc(0.5)*MRT_S_gpu[7])*body_accelerate_gpu[2]*dt_LBM_gpu;
+        MRT_Force_gpu[9] = (prc(2.)- MRT_S_gpu[9]) * (prc(2.)*ux*body_accelerate_gpu[0] - uy*body_accelerate_gpu[1] - uz*body_accelerate_gpu[2]);
+        MRT_Force_gpu[11] = (prc(2.)- MRT_S_gpu[11]) * (uy*body_accelerate_gpu[1] - uz*body_accelerate_gpu[2]);
+        MRT_Force_gpu[13] = (prc(1.)- prc(0.5)*MRT_S_gpu[13]) * (ux*body_accelerate_gpu[1] + uy*body_accelerate_gpu[0]); MRT_Force_gpu[14] = (prc(1.)- prc(0.5)*MRT_S_gpu[14]) * (uy*body_accelerate_gpu[2] + uz*body_accelerate_gpu[1]); MRT_Force_gpu[15] = (prc(1.)- prc(0.5)*MRT_S_gpu[15]) * (ux*body_accelerate_gpu[2] + uz*body_accelerate_gpu[0]);
+        udotu = ux * ux + uy * uy + uz * uz;
+        // meq[0] = rho; meq[1] = (-prc(11.) + prc(19.) * udotu )*rho; meq[2] = (prc(3.) - prc(5.5) * udotu )*rho;
+        // meq[3] = rho*ux; meq[4] = -prc(2.)*rho*ux / prc(3.); meq[5] = rho*uy;  meq[6] = -prc(2.)*rho*uy / prc(3.); meq[7] = rho*uz;  meq[8] = -prc(2.)*rho*uz / prc(3.);
+        // meq[9] = rho*(prc(3.)*ux*ux-udotu); meq[10] = -prc(0.5)*meq[9];
+        // meq[11] = rho*((uy-uz) * (uy+uz)); meq[12] = -prc(0.5)*meq[11];
+        // meq[13] = rho*(ux*uy); meq[14] = rho*(uy*uz); meq[15] = rho*(ux*uz);
+        // meq[16] = prc(0.); meq[17] = prc(0.); meq[18] = prc(0.);
+        for (int i_f=0; i_f<NDIR; i_f++){
+            edotu = (T_P)ex_gpu[i_f] * ux + (T_P)ey_gpu[i_f] * uy + (T_P)ez_gpu[i_f] * uz;
+            feq[i_f]= rho * w_equ_gpu[i_f] * (prc(1.) + prc(3.)*edotu + prc(4.5)*edotu*edotu - prc(1.5)* udotu);
+        }
+        for (int i_f=0; i_f<NDIR; i_f++){
+            m[i_f] = prc(0.);
+            meq[i_f] = prc(0.);
+            for (int i_m=0; i_m<NDIR; i_m++){
+                m[i_f] = m[i_f] + MRT_Trans_M_gpu[i_f*NDIR + i_m] * f[i_m];
+                meq[i_f] = meq[i_f] + MRT_Trans_M_gpu[i_f*NDIR + i_m] * feq[i_m];
+            }
+            temp_m[i_f] = m[i_f] - (MRT_S_gpu[i_f] * (m[i_f] - meq[i_f])) + MRT_Force_gpu[i_f];
+        }
+        for (int i_f=0; i_f<NDIR; i_f++){
+            f[i_f] = prc(0.);
+            for (int i_m=0; i_m<NDIR; i_m++){
+                f[i_f] = f[i_f] + MRT_Trans_M_inverse_gpu[i_f*NDIR + i_m] * temp_m[i_m];
+            }
+            p_f = (T_P*)((char*)pdf_gpu + i_f * pitch);
+            p_f[i_step_grid[i_f]] = f[i_f] + sigma_ABC *dt_LBM_gpu * (feq_w[i_f] - feq[i_f]) ;   //SRT_OverTau = 1/tau            
+        }
+ // MRT 利用碰撞矩阵inverse(M)*S*M修改为只包含一次矩阵运算的形式
+        T_P fnew[NDIR];
+        T_P MRT_Force_gpu[NDIR]={0};
+        // MRT_Force_gpu[0] = prc(0.); MRT_Force_gpu[2] = prc(0.); MRT_Force_gpu[4] = prc(0.); MRT_Force_gpu[6] = prc(0.); MRT_Force_gpu[8] = prc(0.); MRT_Force_gpu[10] = prc(0.);
+        // MRT_Force_gpu[12] = prc(0.); MRT_Force_gpu[16] = prc(0.); MRT_Force_gpu[17] = prc(0.); MRT_Force_gpu[18] = prc(0.);
+        // MRT_Force_gpu[1] = prc(19.)*(prc(2.)- MRT_S_gpu[1])*(ux*body_accelerate_gpu[0]+uy*body_accelerate_gpu[1]+uz*body_accelerate_gpu[2]);
+        // MRT_Force_gpu[3] = (prc(1.)- prc(0.5)*MRT_S_gpu[3])*body_accelerate_gpu[0]*dt_LBM_gpu; MRT_Force_gpu[5] = (prc(1.)- prc(0.5)*MRT_S_gpu[5])*body_accelerate_gpu[1]*dt_LBM_gpu; MRT_Force_gpu[7] = (prc(1.)- prc(0.5)*MRT_S_gpu[7])*body_accelerate_gpu[2]*dt_LBM_gpu;
+        // MRT_Force_gpu[9] = (prc(2.)- MRT_S_gpu[9]) * (prc(2.)*ux*body_accelerate_gpu[0] - uy*body_accelerate_gpu[1] - uz*body_accelerate_gpu[2]);
+        // MRT_Force_gpu[11] = (prc(2.)- MRT_S_gpu[11]) * (uy*body_accelerate_gpu[1] - uz*body_accelerate_gpu[2]);
+        // MRT_Force_gpu[13] = (prc(1.)- prc(0.5)*MRT_S_gpu[13]) * (ux*body_accelerate_gpu[1] + uy*body_accelerate_gpu[0]); MRT_Force_gpu[14] = (prc(1.)- prc(0.5)*MRT_S_gpu[14]) * (uy*body_accelerate_gpu[2] + uz*body_accelerate_gpu[1]); MRT_Force_gpu[15] = (prc(1.)- prc(0.5)*MRT_S_gpu[15]) * (ux*body_accelerate_gpu[2] + uz*body_accelerate_gpu[0]);
+        udotu = ux * ux + uy * uy + uz * uz;
+        for (int i_f=0; i_f<NDIR; i_f++){
+            edotu = (T_P)ex_gpu[i_f] * ux + (T_P)ey_gpu[i_f] * uy + (T_P)ez_gpu[i_f] * uz;
+            feq[i_f]= rho * w_equ_gpu[i_f] * (prc(1.) + prc(3.)*edotu + prc(4.5)*edotu*edotu - prc(1.5)* udotu);
+        }
+        for (int i_f=0; i_f<NDIR; i_f++){
+            fnew[i_f] = prc(0.);            
+            for (int i_m=0; i_m<NDIR; i_m++){
+                fnew[i_f] = fnew[i_f] + MRT_Collision_M_gpu[i_f*NDIR + i_m] * (f[i_m]-feq[i_m]);                
+            }
+            p_f = (T_P*)((char*)pdf_gpu + i_f * pitch);
+            p_f[i_step_grid[i_f]] = f[i_f] - fnew[i_f] + sigma_ABC *dt_LBM_gpu * (feq_w[i_f] - feq[i_f]);// + dt_LBM_gpu*  MRT_Force_gpu[i_f];
+        }
+
+2024/05/16 alter
+1. 修改郭老师的非平衡态外推边界条件，不再使用边界法线方向外推，而是使用延特征线（离散速度）方向进行外推，这样做的好处是角点处理简单。与之相对的，法线方向外推在角点处需要单独额外处理，难以得到统一的结果。
+2. 添加碰撞后分布函数的非平衡态外推，由于碰撞前外推后还需要再进行一次碰撞，这对MRT来说处理比较麻烦，因此直接使用碰撞后的分布函数进行外推。
+
+2024/05/15 add features 
+1. 完成添加MRT功能
+2. 完成添加常数体积力项
+
+2024/05/15 alter
+1. 修改函数名称：particle_Force_GPU改为particle_IBB_BC_Force_GPU。
+原因：该函数的实际功能包含了插值反弹边界的实现和求球体受到的力两个功能，因此名称修改。
+
+2024/05/14 debug
+1. 添加内存释放语句，之前忘了加
+cudaErrorCheck(cudaFree(Boundary_yz0_gpu));
+cudaErrorCheck(cudaFree(Boundary_yz1_gpu));
+free(Particl_BC_fOld); //该语句不是忘了添加，是在其它地方实现了，不过这里还是修改回来，还是统一释放内存空间，另一个地方的被注释掉了。
+2. 在main中添加以下语句，没有这两个语句会造成使用双精度计算是内存访问冲突报错。目前不知道为什么会这样。
+cudaDeviceProp props;
+cudaGetDeviceProperties(&props, 0);
+3. sizeof(float)修改为sizeof(T_P)
+
+2024/05/13 add features 
+1. 尝试添加MRT功能
+
+2024/04/26 alter
+1.  修改了initialization.cpp中弛豫时间求解公式，由原来的只能适用于格子声速1/sqrt(3)的情形修改为
+RelaxtionTime = prc(0.5) + KinematicViscosity_LBM / (sound_speed_LBM*sound_speed_LBM * dt_LBM);          // relaxation time in collision, related to Re number
+只要在module.h中修改speed_Sound_Lattice_2即可使弛豫时间求解适用于不同的格子声速。
+
+2024/04/22 establish
+目标是实现圆球在声波中的运动。需要以下功能（未实现的功能）
+1. 边界使用开放边界条件，计划使用Absorbing boundary condition, ABC或郭照立2002年提出的非平衡态外推。
+2. 颗粒运动还未实现，需要refilling功能。
+3. 初始化问题，目前计划使用平衡态初始化。
+4. MRT
+5. 不可压假设
+
+

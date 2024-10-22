@@ -1,0 +1,138 @@
+#*********************************************************************************#
+#*          CONTROL FILE FOR MULTIPHASE FLOW SIMULATION IN MF-LBM                *#
+#*********************************************************************************#
+
+#=========================== simulation_status ====================================
+# value stored on job_status.txt                                      
+# new_simulation                - new simulation                                  
+# continue_simulation           - continue previous simulation
+# else                          - wrong status. stop                                       
+
+
+#=========================== simulation setup =====================================
+#  Initial fluid distribution option:  (useless)
+#  1 - 
+#  0 or else - error!                  
+initial_fluid_distribution_option 1
+
+# Convergence_criteria: (useless)
+# used in steady state simulation. 
+# default is 1d-6, use 1d-4 or 1d-3 instead for steady-state-option 3 to reduce simulation
+# time and deal with fluctuation
+convergence_criteria 1e-4
+
+# output field data precision (useless): 
+# 0 - single precision; 1 - double precision
+output_fieldData_precision_cmd 1 #There is a problem in the output precision control, the floating point precision of the output is the same as the precision in the code
+
+# Whether to allow continue simulation: 
+# 0 - Always start new simulation based on the control file - no continue simulation;
+# 1 - allow continue simulation when value of job_status.txt is "continue_simulation"  - allow continue simulation
+# 2 - Always continue simulation regardless of the value of job_status.txt (Need to give the initial file) -  Always continue simulation
+allow_continue_simulation 1
+
+#=============================== parameters for MRT ================================
+# parameters used for MRT  (#MRT_s1 # MRT_s2 # MRT_s4 # MRT_s10 # MRT_s16)
+MRT_s1    1.19
+MRT_s2    1.4
+MRT_s4    1.2
+MRT_s10   1.4
+MRT_s16   1.98
+
+#=================================  geometry ======================================
+# Lattice dimensions nxGlobal, nyGlobal, nzGlobal, must be integral multiple of 
+# npx, npy and npz, respectively //Contains the absorption layer, but not the virtual point layer
+nxGlobal	100 # 140
+nyGlobal	400 # 400
+nzGlobal	500 # 600
+
+# The basic info of first particle center and the diameter of particle, index system
+Coor_Sphere_1_x	    50.5 # 70.5
+Coor_Sphere_1_y	    100 # 100
+Coor_Sphere_1_z	    450 # 460
+GridNum_Sphere_1_D  8 # 8
+sphere_1_Density    1860.465  #1.15  #1860.465 (means 2400 kg/m^3 in air)
+
+# The basic info of second particle center and the diameter of particle, index system
+Coor_Sphere_2_x	    50.5 # 70.5
+Coor_Sphere_2_y	    293.4 # 293.4
+Coor_Sphere_2_z	    450 # 460
+GridNum_Sphere_2_D  8 # 8
+sphere_2_Density    1860.46  #1.15  #1860.46
+
+# the time step of the particles joining the flow field
+Time_Step_Sphere_Join 2
+
+# Absorbing Layers for Nonreflecting Boundary Conditions 
+# nAbsorbingL 
+nAbsorbingL	20
+
+#=============================== parameters for LBM ================================
+# the grid size, time step, or their ratio of LBM 
+dx_LBM 1.
+# dt_LBM 1.
+c_LBM 1.
+
+#=============================== fluid property ===================================
+# lid velocity of up wall in LBM system
+Lid_velocity 7.47e-4    #  7.47e-4 (means 0.44 m/s in air)
+
+# frequency of sound wave in LBM system
+Frequency_lbm 2.547e-6    #  2.547e-6 (means 1500 Hz in air)
+
+# Reynolds number
+Reynolds_number 0.23 # 0.23
+
+# Kinematic Viscosity of fluid in LBM system (if this term is zero, we get Kinematic Viscosity from Reynolds number and lid velocity, means that KinematicViscosity_LBM = Lid_velocity * (T_P)GridNum_Sphere_D / Reynolds_number;)
+KinematicViscosity_LBM  0.02369  #0.13343  #0.02369  (means 1.395e-5 m^2/s in air)
+# Kinematic Viscosity of fluid in physics system (useless;)
+# KinematicViscosity_phy 0
+
+# Density of fluid
+Density 1.0
+
+# A dimensionless transformation of the Force_source term is required, initial value of body force or pressure gradient along x,y,z direction
+body_accelerate_x 0
+body_accelerate_y 0
+#  a=g * (1-1/r_rho)=-1.5392e-6  
+body_accelerate_z 0
+
+# the force in particles along x,y,z direction in LBM system
+accelerate_particle_force_LBM_x 0
+accelerate_particle_force_LBM_y 0
+accelerate_particle_force_LBM_z -2.826e-11   #-1.5392e-4  #-2.826e-11 (means gravity 9.8 m/s^2 in air)
+
+#================================== timers ========================================
+# timer: max iterations, 
+max_time_step 14000000   #14000000  (means 25ms in air)
+
+# timer: when to output detailed visualization data - rho, ux, uy, uz
+ntime_visual 10000
+
+# timer: when to output particle info data (i.e. particles coords, velocity, force, and so on) -- When we compare relative particles details, it is best not to set the value too large
+ntime_particles_info 1000
+
+# timer: when to output distribution function info data for continue simulation 
+ntime_check_save_checkpoint_data 100000
+
+# timer: interval to save checkpoint data based on wall clock time, in hours
+checkpoint_save_timer 3.0
+
+# timer: time interval used to save secondary checkpoint data based on wall clock time, in hours
+# use a large value to reduce the storage size
+checkpoint_2rd_save_timer 24.0
+
+# timer: simulation duration in hours
+# save checkpoint data and exit program after simulation_duration_timer
+simulation_duration_timer 240
+
+# timer: when to output animation (phase info only) data - overridden by d_vol_animation if d_vol_animation>0 
+ntime_animation 10000
+
+#==================================== CUDA information ========================================
+# Number of threads in a thread block, in each direction
+# Preferred to be a multiple of 32 (warp size)
+# only block_Threads_X is useful
+block_Threads_X		128
+block_Threads_Y		1
+block_Threads_Z		1

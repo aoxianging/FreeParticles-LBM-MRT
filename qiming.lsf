@@ -1,0 +1,19 @@
+#!/bin/bash
+#BSUB-q 2a100-40 ##队列名
+#BSUB-n 1 ##申请的CPU总核数
+#BSUB-e %J.err
+#BSUB-o %J.out
+#BSUB-R "span[ptile=1]" ##每个host上的CPU核数
+#BSUB-gpu "num=1/task"
+###"num=4/host"参数的含义是每个host申请4张GPU卡，那么此脚本总共申请了1个host,每个host上4个CPU核，每个host上分配4张GPU卡;也可以使用"num=1/task"参数,其含义是每个CPU核申请1张GPU卡，那么此时脚本总共申请了1个host，每个host上4个CPU核，每个CPU核分配1张GPU卡，总共4张GPU卡。
+ 
+date
+hostfile=`echo $LSB_DJOB_HOSTFILE`
+NP=`cat $hostfile | wc-l`
+
+module load cuda/11.8
+
+#nvcc gputest.cu-o gputest
+
+./LBM_CUDA > $LSB_JOBID.log 2>&1
+date
